@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gridiron GM</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#667085;--ac:#1f7a4d;--acx:#fff;--bd:#e3e6ea;--bad:#c0392b;--warn:#b7791f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--card:#171c23;--tx:#e8ebef;--mut:#8b95a3;--ac:#3ecf8e;--acx:#06210f;--bd:#262d36;--bad:#ff6b5b;--warn:#f0b64a}}
+:root[data-theme="dark"]{--bg:#0f1318;--card:#171c23;--tx:#e8ebef;--mut:#8b95a3;--ac:#3ecf8e;--acx:#06210f;--bd:#262d36;--bad:#ff6b5b;--warn:#f0b64a}
+*{box-sizing:border-box}html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:12px}
+header{display:flex;justify-content:space-between;align-items:baseline}
+h1{font-size:21px;margin:6px 0}h3{margin:0 0 8px;font-size:15px}h4{margin:10px 0 4px;font-size:13px;color:var(--mut)}
+nav{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px}
+nav button,.btn{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 13px;border-radius:999px;font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on,.btn.p{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.big{font-size:30px;font-weight:700;color:var(--ac)}.big small{font-size:13px;font-weight:400;color:var(--mut)}
+.r{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--bd)}.r:first-of-type{border-top:0}
+.pos{width:42px;font-size:12px;color:var(--mut)}.r span{flex:1}.r i{font-style:normal;color:var(--mut);font-size:12px;margin-left:4px}
+.r em{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}.g{color:var(--ac)}.m,small{color:var(--mut)}.bad{color:var(--bad)}
+u{text-decoration:none;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;color:#fff}u.w{background:var(--warn)}u.b{background:var(--bad)}
+select,input,textarea{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{font:12px/1.4 ui-monospace,Menlo,monospace}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip{border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:8px;padding:6px 9px;margin:0 6px 6px 0;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}.chip.on small{color:inherit}
+.verdict{font-size:17px;font-weight:700;margin:6px 0}
+.banner{background:var(--card);border:1px dashed var(--warn);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px}
+label{font-size:12px;color:var(--mut)}
+</style></head><body><main>
+<header><h1>🏈 Gridiron GM</h1><span class="m" id="wk"></span></header>
+<nav id="nav"></nav><div id="ban"></div><div id="v"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+const SAMPLE=`name,pos,team,proj,ros,matchup,bye,status,owner
+Marcus Hale,QB,DEN,19.8,19.2,7,12,ok,me
+Eli Navarro,QB,SEA,15.2,15.0,5,8,ok,me
+Dante Rowe,RB,SF,16.2,15.5,6,9,ok,me
+Isaiah Cole,RB,DAL,13.1,12.4,4,10,ok,me
+Tre Walker,RB,MIA,9.4,10.8,8,6,ok,me
+Kai Mercer,RB,BAL,8.8,9.5,7,7,Q,me
+Jalen Brooks,WR,CIN,17.5,16.8,8,12,ok,me
+Amon Pierce,WR,LAR,14.6,14.9,5,8,ok,me
+Devin Shaw,WR,NYJ,11.2,11.0,3,5,ok,me
+Owen Pratt,WR,GB,10.1,10.9,6,11,ok,me
+Colt Maddox,TE,KC,10.3,10.1,6,10,ok,me
+Reid Tanner,TE,HOU,6.1,6.4,5,6,ok,me
+Nate Quinn,RB,CHI,11.4,12.6,7,7,ok,fa
+Cole Briggs,RB,NE,7.5,9.9,5,14,ok,fa
+Leo Vance,WR,TB,12.2,12.8,6,9,ok,fa
+Troy Banks,WR,IND,9.3,10.4,4,11,ok,fa
+Sam Ortiz,TE,LV,8.9,8.7,7,13,ok,fa
+Zane Foley,QB,TEN,14.1,13.8,6,10,ok,fa
+Gus Lyle,RB,PHI,18.9,18.0,6,9,ok,Sharks
+Ty Okafor,WR,MIN,19.4,18.7,7,6,ok,Sharks
+Brandt Cole,TE,DET,12.8,12.5,6,8,ok,Wolves
+Miles Hart,QB,BUF,22.1,21.5,6,7,ok,Wolves
+Rex Dalton,RB,ATL,15.0,14.4,5,11,ok,Wolves
+Joel Pike,WR,ARI,15.7,15.1,6,11,ok,Titans
+Andre Wade,RB,CLE,12.0,11.5,4,9,ok,Titans`;
+let S={week:5,faab:100,csv:SAMPLE,tab:'lineup',sa:'',sb:'',give:[],get:[]};
+try{Object.assign(S,JSON.parse(localStorage.getItem('ggm')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('ggm',JSON.stringify(S))}catch(e){}};
+const VOL={QB:.25,RB:.4,WR:.45,TE:.5,K:.45,DST:.5};let SLOTS=['QB','RB','RB','WR','WR','TE','FLEX'];
+let API=null,ERR='';
+const myId=()=>+S.team||API.myTeamId||API.teams[0].id,tn=id=>(API.teams.find(t=>t.id==id)||{}).name||'?';
+const parse=()=>API?API.players.map(p=>({...p,o:p.tid==0?'fa':p.tid==myId()?'me':tn(p.tid)})):csvParse();
+async function load(force){try{const r=await fetch('/api/league'+(force?'?refresh=1':''));const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);API=j;ERR='';S.week=j.week;if(j.slots&&j.slots.length)SLOTS=j.slots}catch(e){API=null;ERR=String(e.message||e)}R()}
+const csvParse=()=>S.csv.trim().split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(r=>r.length>=9&&!isNaN(+r[3])).map(r=>({n:r[0],p:r[1].toUpperCase(),t:r[2],pr:+r[3],ros:+r[4]||0,m:+r[5]||5,b:+r[6],st:r[7],o:r[8]}));
+const adj=p=>p.pr*(.9+.02*p.m);
+const out=p=>/^(out|ir)$/i.test(p.st),avail=p=>p.b!=S.week&&!out(p);
+const flag=x=>x.b==S.week?'<u class="w">BYE</u>':out(x)?'<u class="b">OUT</u>':x.st.toLowerCase()!='ok'?`<u class="w">${esc(x.st)}</u>`:'';
+function best(ps,f,all){const pool=ps.filter(p=>all||avail(p)).sort((a,b)=>f(b)-f(a)),used=new Set(),slots=[];
+ for(const s of [...SLOTS.filter(s=>s!='FLEX'),...SLOTS.filter(s=>s=='FLEX')]){const x=pool.find(p=>!used.has(p)&&(s=='FLEX'?'RB WR TE'.includes(p.p):p.p==s));slots.push([s,x]);if(x)used.add(x)}
+ return{slots,used,total:slots.reduce((a,[,x])=>a+(x?f(x):0),0)}}
+const erf=x=>{const t=1/(1+.3275911*Math.abs(x)),y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return x>=0?y:-y};
+const phi=z=>.5*(1+erf(z/Math.SQRT2));
+const row=(s,x)=>x?`<div class="r"><b class="pos">${s}</b><span>${esc(x.n)}<i>${x.p} · ${esc(x.t)}</i>${flag(x)}</span><em>${adj(x).toFixed(1)}</em></div>`:`<div class="r"><b class="pos">${s}</b><span class="m">No eligible player</span><em>0</em></div>`;
+const chip=(k,p,i)=>`<button class="chip${S[k].includes(i)?' on':''}" data-a="${k}" data-i="${i}">${esc(p.n)} <small>${p.p} · ${p.ros.toFixed(1)}</small></button>`;
+const sel=(k,list,cur)=>`<select data-k="${k}">${list.map(p=>`<option${p.n==cur?' selected':''}>${esc(p.n)}</option>`).join('')}</select>`;
+const V={};
+V.lineup=P=>{const me=P.filter(p=>p.o=='me'),b=best(me,adj),bench=me.filter(p=>!b.used.has(p)).sort((a,c)=>adj(c)-adj(a));
+ return `<div class="card"><div class="big">${b.total.toFixed(1)} <small>projected pts · optimal lineup, Week ${S.week}</small></div>${b.slots.map(([s,x])=>row(s,x)).join('')}</div>
+ <div class="card"><h3>Bench</h3>${bench.map(x=>row(x.p,x)).join('')||'<span class="m">Empty</span>'}</div>
+ <p class="m" style="font-size:12px">Projections are adjusted for matchup (1 = tough, 10 = soft). Players on bye or OUT are excluded automatically; FLEX = RB/WR/TE.</p>`};
+V.ss=P=>{const L=P.filter(p=>p.o=='me');if(L.length<2)return'<div class="card">Add at least 2 players to your roster in Data.</div>';
+ const A=L.find(p=>p.n==S.sa)||L[0],B=L.find(p=>p.n==S.sb&&p!=A)||L.find(p=>p!=A);
+ const a=avail(A)?adj(A):0,b=avail(B)?adj(B):0,sa=a*VOL[A.p]||1,sb=b*VOL[B.p]||1,pa=phi((a-b)/Math.hypot(sa,sb)),w=a>=b?A:B,pr=Math.max(pa,1-pa);
+ const st=(p,x,s)=>`<div><b>${esc(p.n)}</b>${flag(p)}<br><span class="big" style="font-size:24px">${x.toFixed(1)}</span><br><small>Floor ${Math.max(0,x-1.28*s).toFixed(1)} · Ceiling ${(x+1.28*s).toFixed(1)}</small></div>`;
+ return `<div class="card"><h3>Start / Sit</h3><div class="two">${sel('sa',L,A.n)}${sel('sb',L.filter(p=>p!=A),B.n)}</div>
+ <div class="two" style="margin-top:14px">${st(A,a,sa)}${st(B,b,sb)}</div>
+ <div class="verdict g">Start ${esc(w.n)} · ${(pr*100).toFixed(0)}% to outscore</div>
+ <small>${pr<.6?'Toss-up: take the higher ceiling if you are the underdog this week, the higher floor if you are the favorite.':'Clear edge on projection and matchup.'}</small></div>`};
+V.wv=P=>{const me=P.filter(p=>p.o=='me'),fa=P.filter(p=>p.o=='fa');
+ const rows=fa.map(f=>{const d=me.filter(p=>p.p==f.p).sort((a,b)=>a.ros-b.ros)[0];return{f,d,g:f.ros-(d?d.ros:0)}}).sort((a,b)=>b.g-a.g);
+ return `<div class="card"><h3>Waiver wire</h3><small>Ranked by rest-of-season upgrade over your weakest player at the same position. Bid is a suggestion from your remaining FAAB ($${S.faab}).</small>
+ ${rows.map(({f,d,g})=>{const bid=Math.round(S.faab*Math.min(35,Math.max(1,g*4))/100);return `<div class="r"><b class="pos">${f.p}</b><span>${esc(f.n)}<i>${esc(f.t)}</i>${flag(f)}<br><small>${g>0?`Drop ${d?esc(d.n):'—'} · bid ~$${bid}`:'No upgrade for your roster'}</small></span><em class="${g>0?'g':'m'}">${g>0?'+':''}${g.toFixed(1)}</em></div>`}).join('')||'<br><span class="m">No free agents (owner = fa) in your data.</span>'}</div>`};
+V.tr=P=>{const me=P.filter(p=>p.o=='me'),idx=P.map((p,i)=>[p,i]),mine=idx.filter(([p])=>p.o=='me'),oth=idx.filter(([p])=>p.o!='me'&&p.o!='fa');
+ const give=S.give.map(i=>P[i]).filter(Boolean),get=S.get.map(i=>P[i]).filter(Boolean);
+ const before=best(me,p=>p.ros,true).total,after=best(me.filter(p=>!give.includes(p)).concat(get),p=>p.ros,true).total,d=after-before;
+ const v=!give.length&&!get.length?'Pick players on both sides':d>=1?'Good for you':d>-1?'Roughly even — decide on depth and bye weeks':'Bad for you';
+ return `<div class="card"><h3>Trade analyzer</h3><h4>You give</h4>${mine.map(([p,i])=>chip('give',p,i)).join('')}
+ <h4>You get</h4>${[...new Set(oth.map(([p])=>p.o))].map(o=>`<small>${esc(o)}</small><br>${oth.filter(([p])=>p.o==o).map(([p,i])=>chip('get',p,i)).join('')}<br>`).join('')}
+ <div class="verdict ${d>=1?'g':d<=-1?'bad':''}">${v}</div>
+ <small>Optimal weekly lineup (rest-of-season avg): ${before.toFixed(1)} → ${after.toFixed(1)} (${d>=0?'+':''}${d.toFixed(1)}/wk). Accounts for roster fit, not just raw value.</small></div>`};
+V.data=P=>`<div class="card"><h3>League data</h3>${API?`<p><b class="g">Live: ${esc(API.league)}</b> · updated ${new Date(API.updated).toLocaleTimeString()}<br><label>My team</label><select data-k="team">${API.teams.map(t=>`<option value="${t.id}"${t.id==myId()?' selected':''}>${esc(t.name)}</option>`).join('')}</select></p><p><button class="btn p" data-a="refresh">Refresh from ESPN</button></p>`:ERR?`<p class="bad">API offline: ${esc(ERR)}. Using manual CSV below.</p>`:''}<div class="two"><div><label>Current week</label><input type="number" min="1" max="18" data-k="week" value="${S.week}"></div><div><label>FAAB left ($)</label><input type="number" min="0" data-k="faab" value="${S.faab}"></div></div>
+ <p><label>CSV: name,pos,team,proj,ros,matchup(1-10),bye,status,owner — owner is "me", "fa", or a rival team name. Status: ok, Q, OUT, IR.</label></p>
+ <textarea id="csv" rows="14" spellcheck="false">${esc(S.csv)}</textarea>
+ <p><button class="btn p" data-a="apply">Apply data</button> <button class="btn" data-a="reset">Reset sample</button></p>
+ <small>${P.length} players loaded. Saved in this browser only.</small></div>`;
+V.mu=P=>{if(!API)return'<div class="card">Matchups need the live ESPN connection (see Data tab).</div>';
+ const id=myId(),m=API.matchups.find(x=>x.h==id||x.a==id),oid=m&&(m.h==id?m.a:m.h);
+ if(!oid)return'<div class="card">No head-to-head found this week (bye or playoffs).</div>';
+ const side=t=>{const b=best(P.filter(p=>p.tid==t),adj);return{b,t:b.total,sd:Math.hypot(...b.slots.map(([,x])=>x?adj(x)*(VOL[x.p]||.4):0))}};
+ const A=side(id),B=side(oid),pw=phi((A.t-B.t)/Math.hypot(A.sd,B.sd));
+ return `<div class="card"><h3>Week ${S.week} matchup</h3><div class="two"><div><b>${esc(tn(id))}</b><div class="big">${A.t.toFixed(1)}</div></div><div><b>${esc(tn(oid))}</b><div class="big" style="color:var(--tx)">${B.t.toFixed(1)}</div></div></div>
+ <div class="verdict ${pw>=.5?'g':'bad'}">${(pw*100).toFixed(0)}% win probability</div><small>Both teams at their optimal lineups; spread from position volatility.</small></div>
+ <div class="card"><h3>Their optimal lineup</h3>${B.b.slots.map(([s,x])=>row(s,x)).join('')}</div>`};
+V.lg=P=>{if(!API)return'<div class="card">League tools need the live ESPN connection (see Data tab).</div>';
+ const rows=API.teams.map(t=>({t,pw:best(P.filter(p=>p.tid==t.id),p=>p.ros,true).total})).sort((a,b)=>b.t.w-a.t.w||b.t.pf-a.t.pf),pr=[...rows].sort((a,b)=>b.pw-a.pw).map(r=>r.t.id);
+ return `<div class="card"><h3>Standings &amp; power rank</h3>${rows.map(({t,pw},i)=>`<div class="r"><b class="pos">${i+1}</b><span>${esc(t.name)}${t.id==myId()?'<u style="background:var(--ac);color:var(--acx)">YOU</u>':''}<br><small>${t.w}-${t.l}${t.t?'-'+t.t:''} · PF ${t.pf.toFixed(0)} · Power #${pr.indexOf(t.id)+1}</small></span><em>${pw.toFixed(1)}</em></div>`).join('')}</div>
+ <small>Right column: best-lineup rest-of-season projection per week. Power rank sorts by it.</small>`};
+const TABS=[['lineup','Lineup'],['mu','Matchup'],['ss','Start/Sit'],['wv','Waivers'],['tr','Trades'],['lg','League'],['data','Data']];
+function R(){save();const P=parse();
+ $('#nav').innerHTML=TABS.map(([k,n])=>`<button class="${S.tab==k?'on':''}" data-a="tab" data-t="${k}">${n}</button>`).join('');
+ $('#wk').textContent='Week '+S.week;
+ $('#ban').innerHTML=API?(API.stale?'<div class="banner">ESPN unreachable, showing cached data.</div>':''):S.csv==SAMPLE?'<div class="banner">Sample data (fictional players). Paste your league in the <b>Data</b> tab.</div>':'';
+ $('#v').innerHTML=V[S.tab](P)}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a;
+ if(a=='tab')S.tab=t.dataset.t;
+ else if(a=='give'||a=='get'){const L=S[a],i=+t.dataset.i,j=L.indexOf(i);j<0?L.push(i):L.splice(j,1)}
+ else if(a=='apply'){S.csv=$('#csv').value;S.give=[];S.get=[]}
+ else if(a=='reset'){S.csv=SAMPLE;S.give=[];S.get=[]}
+ else if(a=='refresh'){S.give=[];S.get=[];load(true);return}
+ R()});
+document.addEventListener('change',e=>{const k=e.target.dataset.k;if(!k)return;S[k]=e.target.type=='number'?+e.target.value:e.target.value;if(k=='team'){S.give=[];S.get=[]}R()});
+R();load();
+</script></body></html>
