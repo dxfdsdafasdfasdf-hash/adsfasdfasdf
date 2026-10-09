@@ -69,11 +69,11 @@ http.createServer(async (req, res) => {
     res.end(typeof b == 'string' ? b : JSON.stringify(b));
   };
   try {
+    if (req.url.startsWith('/api/health')) return send(200, {ok:true});
     if (PW) {
       const a = Buffer.from((req.headers.authorization || '').split(' ')[1] || '', 'base64').toString();
       if (a.split(':').slice(1).join(':') !== PW) { res.writeHead(401, {'www-authenticate':'Basic realm="Gridiron GM"'}); return res.end('Auth required'); }
     }
-    if (req.url.startsWith('/api/health')) return send(200, {ok:true, league:LEAGUE, season:SEASON});
     if (req.url.startsWith('/api/league')) return send(200, await league(req.url.includes('refresh')));
     send(200, fs.readFileSync(path.join(dir, 'public', 'index.html'), 'utf8'), 'text/html; charset=utf-8');
   } catch (e) { send(e.status || 500, {error:e.message}); }
