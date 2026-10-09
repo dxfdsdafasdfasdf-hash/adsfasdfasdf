@@ -58,6 +58,18 @@ async function build() {
     po:(L.settings.scheduleSettings || {}).playoffTeamCount || 6};
 }
 
+const SYS = `You are an elite fantasy football coach for a PPR league. Use ONLY the JSON data provided. "algorithmPicks" are automated suggestions: sanity-check them and reject anything a real manager would refuse (never trade a star for a scrub, kickers and defenses are not trade assets, respect byes and injuries). Be decisive and specific: lead with the most important move this week, name players, give one line of reasoning each, and end with a short list of risks. Under 300 words. Use **bold** for player names.`;
+async function coach(body) {
+  const key = E.ANTHROPIC_API_KEY;
+  if (!key) { const e = new Error('AI coach not configured: set ANTHROPIC_API_KEY'); e.status = 503; throw e; }
+  const r = await fetch('https://api.anthropic.com/v1/messages', {method:'POST',
+    headers:{'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:E.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens:1200, system:SYS,
+      messages:[{role:'user', content:`League data (JSON):\n${JSON.stringify(body.context)}\n\nRequest: ${body.question || 'Give me my weekly game plan.'}`}]})});
+  const j = await r.json();
+  if (!r.ok) { const e = new Error((j.error && j.error.message) || `Anthropic returned ${r.status}`); e.status = 502; throw e; }
+  return j.content.filter(c => c.type == 'text').map(c => c.text).join('\n');
+}
 let cache = null;
 async function league(force) {
   if (!force && cache && Date.now() - cache.at < TTL) return cache.data;
@@ -77,6 +89,11 @@ http.createServer(async (req, res) => {
       if (a.split(':').slice(1).join(':') !== PW) { res.writeHead(401, {'www-authenticate':'Basic realm="Gridiron GM"'}); return res.end('Auth required'); }
     }
     if (req.url.startsWith('/api/league')) return send(200, await league(req.url.includes('refresh')));
+    if (req.method == 'POST' && req.url.startsWith('/api/coach')) {
+      let raw = '';
+      for await (const c of req) { raw += c; if (raw.length > 2e5) throw Object.assign(new Error('Request too large'), {status:413}); }
+      return send(200, {text: await coach(JSON.parse(raw || '{}'))});
+    }
     send(200, fs.readFileSync(path.join(dir, 'public', 'index.html'), 'utf8'), 'text/html; charset=utf-8');
   } catch (e) { send(e.status || 500, {error:e.message}); }
 }).listen(+E.PORT || 3000, () => console.log('Gridiron GM up'));

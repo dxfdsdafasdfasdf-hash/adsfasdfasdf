@@ -11,6 +11,7 @@ Zero-dependency Node server: proxies ESPN's fantasy API (free, includes ESPN's o
 | `ESPN_S2`, `SWID` | if league is private | espn.com (logged in) -> DevTools -> Application -> Cookies. Keep the braces in SWID. |
 | `APP_PASSWORD` | recommended | enables HTTP Basic auth (any username) so your league data isn't public |
 | `MY_TEAM_ID` | no | otherwise detected from SWID, or pick your team in the Data tab |
+| `ANTHROPIC_API_KEY` | for AI Coach | console.anthropic.com; optional `ANTHROPIC_MODEL` (default claude-sonnet-5-5) |
 | `SEASON`, `CACHE_SEC` | no | default current season, 300s cache |
 
 Endpoints: `/api/health`, `/api/league` (add `?refresh=1` to bypass cache).

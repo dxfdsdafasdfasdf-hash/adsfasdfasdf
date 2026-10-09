@@ -51,6 +51,7 @@ label{font-size:12px;color:var(--mut);font-weight:600}
 .card:hover{border-color:color-mix(in srgb,var(--ac) 35%,var(--bd))}
 .btn,.chip,nav button{transition:transform .1s,background .15s}.btn:active,.chip:active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.ai{border-color:color-mix(in srgb,var(--ac) 45%,var(--bd))}.aiout{line-height:1.65;font-size:14.5px}
 </style></head><body><main>
 <div class="top"><header><h1>🏈 Gridiron GM</h1><span class="pill" id="wk"></span></header>
 <nav id="nav"></nav></div><div id="ban"></div><div id="v"></div>
@@ -125,11 +126,12 @@ V.wv=P=>{const me=P.filter(p=>p.o=='me'),fa=P.filter(p=>p.o=='fa');
 V.tr=P=>{const me=P.filter(p=>p.o=='me'),idx=P.map((p,i)=>[p,i]),mine=idx.filter(([p])=>p.o=='me'),oth=idx.filter(([p])=>p.o!='me'&&p.o!='fa');
  const give=S.give.map(i=>P[i]).filter(Boolean),get=S.get.map(i=>P[i]).filter(Boolean);
  const before=best(me,p=>p.ros,true).total,after=best(me.filter(p=>!give.includes(p)).concat(get),p=>p.ros,true).total,d=after-before;
+ const rl=repl(P),gv=give.reduce((a,p)=>a+val(p,rl),0),tv=get.reduce((a,p)=>a+val(p,rl),0),vc=give.length&&get.length?(gv>=tv*.85?(gv>tv*1.5?' Value check: you are overpaying.':' Value check: fairly balanced, they could accept.'):' Value check: they give up far more value than they receive, so expect a decline.'):'';
  const v=!give.length&&!get.length?'Pick players on both sides':d>=1?'Good for you':d>-1?'Roughly even — decide on depth and bye weeks':'Bad for you';
  return `<div class="card"><h3>Trade analyzer</h3><h4>You give</h4>${mine.map(([p,i])=>chip('give',p,i)).join('')}
  <h4>You get</h4>${[...new Set(oth.map(([p])=>p.o))].map(o=>`<small>${esc(o)}</small><br>${oth.filter(([p])=>p.o==o).map(([p,i])=>chip('get',p,i)).join('')}<br>`).join('')}
  <div class="verdict ${d>=1?'g':d<=-1?'bad':''}">${v}</div>
- <small>Optimal weekly lineup (rest-of-season avg): ${before.toFixed(1)} → ${after.toFixed(1)} (${d>=0?'+':''}${d.toFixed(1)}/wk). Accounts for roster fit, not just raw value.</small></div>`};
+ <small>Optimal weekly lineup (rest-of-season avg): ${before.toFixed(1)} → ${after.toFixed(1)} (${d>=0?'+':''}${d.toFixed(1)}/wk). Accounts for roster fit.${vc}</small></div>`};
 V.data=P=>`<div class="card"><h3>League data</h3>${API?`<p><b class="g">Live: ${esc(API.league)}</b> · updated ${new Date(API.updated).toLocaleTimeString()}<br><label>My team</label><select data-k="team">${API.teams.map(t=>`<option value="${t.id}"${t.id==myId()?' selected':''}>${esc(t.name)}</option>`).join('')}</select></p><p><button class="btn p" data-a="refresh">Refresh from ESPN</button></p>`:ERR?`<p class="bad">API offline: ${esc(ERR)}. Using manual CSV below.</p>`:''}<div class="two"><div><label>Current week</label><input type="number" min="1" max="18" data-k="week" value="${S.week}"></div><div><label>FAAB left ($)</label><input type="number" min="0" data-k="faab" value="${S.faab}"></div></div>
  <p><label>CSV: name,pos,team,proj,ros,matchup(1-10),bye,status,owner — owner is "me", "fa", or a rival team name. Status: ok, Q, OUT, IR.</label></p>
  <textarea id="csv" rows="14" spellcheck="false">${esc(S.csv)}</textarea>
@@ -158,6 +160,17 @@ function odds(P){const str={},sd={},res={},N=3000,rem=API.schedule.filter(m=>m.w
 function muCalc(P){if(!API)return null;const id=myId(),m=API.matchups.find(x=>x.h==id||x.a==id),oid=m&&(m.h==id?m.a:m.h);if(!oid)return null;
  const sd=t=>{const b=best(P.filter(p=>p.tid==t),adj);return{t:b.total,s:Math.hypot(...b.slots.map(([,x])=>x?adj(x)*(VOL[x.p]||.4):0))}};
  const A=sd(id),O=sd(oid);return{A,O,oid,pw:phi((A.t-O.t)/Math.hypot(A.s,O.s))}}
+const repl=P=>{const r={};for(const pos of ['QB','RB','WR','TE','K','DST'])r[pos]=P.filter(p=>p.o=='fa'&&p.p==pos).map(p=>p.ros).sort((a,b)=>b-a)[0]||0;return r};
+const val=(p,rl)=>Math.pow(Math.max(0,p.ros-rl[p.p]),1.4);
+let AI={t:'',busy:false};
+const fmt=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+async function coach(q){AI={t:'',busy:true};R();
+ try{const P=parse(),mc=muCalc(P),r=recs(P,mc),m=p=>({n:p.n,pos:p.p,team:p.t,proj:p.pr,ros:p.ros,bye:p.b,status:p.st}),
+  context={week:S.week,league:API?API.league:'manual',format:'PPR',lineupSlots:SLOTS,myRoster:P.filter(p=>p.o=='me').map(m),topFreeAgents:P.filter(p=>p.o=='fa').slice(0,25).map(m),
+  opponent:mc?{team:tn(mc.oid),projected:+mc.O.t.toFixed(1),winProbability:+mc.pw.toFixed(2)}:null,
+  algorithmPicks:{startSwaps:r.sw.map(([i,o])=>[i.n,o.n]),waivers:r.wv.map(x=>({add:x.f.n,drop:x.d.n})),trades:r.trades.map(t=>({give:t.a.n,get:t.b.n,partner:t.o,acceptChance:t.acc}))}};
+  const res=await fetch('/api/coach',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,context})}),j=await res.json();
+  if(!res.ok)throw new Error(j.error||res.status);AI={t:j.text,busy:false}}catch(e){AI={t:'AI coach error: '+e.message,busy:false}}R()}
 function recs(P,mc){
  const me=P.filter(p=>p.o=='me'),fa=P.filter(p=>p.o=='fa'),own=[...new Set(P.map(p=>p.o))].filter(o=>o!='me'&&o!='fa');
  const B=best(me,adj),R0=best(me,p=>p.ros,true).total;
@@ -165,11 +178,13 @@ function recs(P,mc){
  for(const i of [...B.used].filter(p=>cur.length&&!cur.includes(p)).sort((a,b)=>adj(b)-adj(a))){if(!outs.length)break;const k=outs.findIndex(o=>o.p==i.p);sw.push([i,outs.splice(k<0?0:k,1)[0]])}
  const bench=me.filter(p=>!B.used.has(p)),pool=bench.length?bench:me;
  const wv=fa.slice(0,60).map(f=>{let t=null;for(const d of pool){const rest=me.filter(p=>p!=d).concat(f),gr=best(rest,p=>p.ros,true).total-R0,gw=best(rest,adj).total-B.total;if(!t||gr+gw*.5>t.gr+t.gw*.5)t={d,gr,gw}}return{f,...t}}).filter(x=>x.gr>.3||x.gw>1).sort((a,b)=>b.gr+b.gw*.5-a.gr-a.gw*.5).slice(0,4);
- const tr=[];
+ const tr=[],rl=repl(P),sk=p=>p.p=='K'||p.p=='DST';
  for(const o of own){const th=P.filter(p=>p.o==o),T0=best(th,p=>p.ros,true).total;
-  for(const a of me)for(const b of th){const mg=best(me.filter(p=>p!=a).concat(b),p=>p.ros,true).total-R0;if(mg<1)continue;
-   const tg=best(th.filter(p=>p!=b).concat(a),p=>p.ros,true).total-T0;if(tg>=.2)tr.push({o,a,b,mg,tg})}}
- const sc=t=>t.mg+Math.min(t.tg,2)*.5,seen=new Set(),trades=tr.sort((x,y)=>sc(y)-sc(x)).filter(t=>!seen.has(t.a)&&seen.add(t.a)).slice(0,4);
+  for(const a of me)for(const b of th){if(sk(a)||sk(b))continue;const ratio=val(a,rl)/Math.max(val(b,rl),.5);if(ratio<.85||ratio>1.6)continue;
+   const mg=best(me.filter(p=>p!=a).concat(b),p=>p.ros,true).total-R0;if(mg<1)continue;
+   const tg=best(th.filter(p=>p!=b).concat(a),p=>p.ros,true).total-T0;if(tg<0)continue;
+   tr.push({o,a,b,mg,tg,acc:Math.max(10,Math.min(90,Math.round(45+(ratio-1)*60+tg*6)))})}}
+ const seen=new Set(),trades=tr.sort((x,y)=>y.mg*y.acc-x.mg*x.acc).filter(t=>!seen.has(t.a)&&seen.add(t.a)).slice(0,4);
  const ad=[],hurt=[...B.used].filter(p=>p.st.toLowerCase()!='ok');
  if(hurt.length)ad.push(`${hurt.map(p=>p.n+' ('+p.st+')').join(', ')} in your lineup carry injury risk. Check status before kickoff and keep a backup ready.`);
  B.slots.filter(([,x])=>!x).forEach(([s])=>ad.push(`Nobody on your roster is eligible for the ${s} slot. Make it your top waiver priority.`));
@@ -183,8 +198,9 @@ V.adv=P=>{const mc=muCalc(P),r=recs(P,mc),it=(t,sub,v)=>`<div class="r"><span>${
  return `<div class="hero"><div class="hf">${mc?`<div class="ring" style="--p:${pc}"><b>${pc}%</b></div>`:''}<div><small>WEEK ${S.week}${mc?' vs '+esc(tn(mc.oid)):''}</small><div class="big">${mc?mc.A.t.toFixed(1)+'<small> vs '+mc.O.t.toFixed(1)+'</small>':r.B.total.toFixed(1)+'<small> projected</small>'}</div>${o0?`<div class="chips"><span>Playoffs ${Math.round(o0.po*100)}%</span><span>~${o0.ew.toFixed(1)} wins</span></div>`:''}</div></div></div>
  <div class="card"><h3>🎯 Who to start</h3>${r.cur.length?(r.sw.length?r.sw.map(([i,o])=>it(`Start <b>${esc(i.n)}</b> over ${esc(o.n)}`,`${adj(o).toFixed(1)} → ${adj(i).toFixed(1)} projected`,'+'+(adj(i)-adj(o)).toFixed(1))).join(''):'<p class="m">Your ESPN lineup already matches the optimal one. 👍</p>'):r.B.slots.map(([s,x])=>row(s,x)).join('')}</div>
  <div class="card"><h3>🧲 Waiver pickups</h3>${r.wv.map(x=>it(`Add <b>${esc(x.f.n)}</b> (${x.f.p}), drop ${esc(x.d.n)}`,`+${x.gw.toFixed(1)} this week · bid ~$${Math.round(S.faab*Math.min(35,Math.max(1,x.gr*6))/100)}`,'+'+x.gr.toFixed(1)+'/wk')).join('')||'<p class="m">No waiver move improves your lineup right now.</p>'}</div>
- <div class="card"><h3>🤝 Trades to offer</h3>${r.trades.map(t=>it(`Give <b>${esc(t.a.n)}</b> for <b>${esc(t.b.n)}</b>`,`${esc(t.o)} · they gain +${t.tg.toFixed(1)}/wk${t.tg>=.5?' · likely to accept':''}`,'+'+t.mg.toFixed(1)+'/wk')).join('')||'<p class="m">No 1-for-1 trade helps both sides right now.</p>'}</div>
- <div class="card"><h3>💡 Advice</h3>${r.ad.map(a=>`<div class="tip">${esc(a)}</div>`).join('')||'<p class="m">Nothing urgent. Your roster looks solid.</p>'}</div>`};
+ <div class="card"><h3>🤝 Trades to offer</h3>${r.trades.map(t=>it(`Give <b>${esc(t.a.n)}</b> for <b>${esc(t.b.n)}</b>`,`${esc(t.o)} · est. ${t.acc}% to accept · they gain +${t.tg.toFixed(1)}/wk`,'+'+t.mg.toFixed(1)+'/wk')).join('')||'<p class="m">No realistic value-fair 1-for-1 trade right now.</p>'}</div>
+ <div class="card"><h3>💡 Advice</h3>${r.ad.map(a=>`<div class="tip">${esc(a)}</div>`).join('')||'<p class="m">Nothing urgent. Your roster looks solid.</p>'}</div>
+ <div class="card ai"><h3>🤖 AI Coach</h3><small>Claude reviews your roster, the algorithm's picks and your league, then sanity-checks them.</small><p><input id="aq" placeholder="Ask anything: who at flex? Is this trade fair?" value="${esc(S.q||'')}"></p><p><button class="btn p" data-a="coach" data-q="">Weekly game plan</button> <button class="btn" data-a="coach" data-q="ask">Ask</button></p>${AI.busy?'<p class="m">Thinking…</p>':AI.t?`<div class="tip aiout">${fmt(AI.t)}</div>`:''}</div>`};
 const TABS=[['adv','Advisor'],['lineup','Lineup'],['mu','Matchup'],['ss','Start/Sit'],['wv','Waivers'],['tr','Trades'],['lg','League'],['data','Data']];
 function R(){save();const P=parse();
  $('#nav').innerHTML=TABS.map(([k,n])=>`<button class="${S.tab==k?'on':''}" data-a="tab" data-t="${k}">${n}</button>`).join('');
@@ -197,6 +213,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t
  else if(a=='apply'){S.csv=$('#csv').value;S.give=[];S.get=[]}
  else if(a=='reset'){S.csv=SAMPLE;S.give=[];S.get=[]}
  else if(a=='refresh'){S.give=[];S.get=[];load(true);return}
+ else if(a=='coach'){const q=t.dataset.q?($('#aq')||{}).value||'':'';if(q)S.q=q;coach(q);return}
  R()});
 document.addEventListener('change',e=>{const k=e.target.dataset.k;if(!k)return;S[k]=e.target.type=='number'?+e.target.value:e.target.value;if(k=='team'){S.give=[];S.get=[]}R()});
 S.tab='adv';R();load();
