@@ -39,6 +39,18 @@ textarea{font:12px/1.5 ui-monospace,Menlo,monospace}
 .banner{background:var(--card);border:1px dashed var(--warn);border-radius:12px;padding:9px 12px;margin-bottom:14px;font-size:13px}
 .tip{margin:8px 0;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:14px}
 label{font-size:12px;color:var(--mut);font-weight:600}
+.hf{display:flex;align-items:center;gap:18px}
+.ring{flex:none;width:112px;height:112px;border-radius:50%;background:conic-gradient(#fff calc(var(--p)*1%),rgba(255,255,255,.25) 0);display:grid;place-items:center}
+.ring b{width:86px;height:86px;border-radius:50%;background:#0e6b3a;display:grid;place-items:center;font-size:26px;font-weight:800}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.chips span{background:rgba(255,255,255,.2);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;object-position:top;background:var(--bg);flex:none;border:1px solid var(--bd)}
+.hero{background:radial-gradient(120% 140% at 0 0,#14b8a6 0,transparent 55%),linear-gradient(135deg,#0f766e,#15803d 60%,#4d7c0f)}
+@keyframes up{from{opacity:0;transform:translateY(10px)}}
+.card,.hero{animation:up .4s ease both}.card:nth-child(3){animation-delay:.05s}.card:nth-child(4){animation-delay:.1s}.card:nth-child(5){animation-delay:.15s}
+.r{border-radius:10px;transition:background .15s}.r:hover{background:var(--bg)}
+.card:hover{border-color:color-mix(in srgb,var(--ac) 35%,var(--bd))}
+.btn,.chip,nav button{transition:transform .1s,background .15s}.btn:active,.chip:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body><main>
 <div class="top"><header><h1>🏈 Gridiron GM</h1><span class="pill" id="wk"></span></header>
 <nav id="nav"></nav></div><div id="ban"></div><div id="v"></div>
@@ -79,7 +91,7 @@ const VOL={QB:.25,RB:.4,WR:.45,TE:.5,K:.45,DST:.5};let SLOTS=['QB','RB','RB','WR
 let API=null,ERR='';
 const myId=()=>+S.team||API.myTeamId||API.teams[0].id,tn=id=>(API.teams.find(t=>t.id==id)||{}).name||'?';
 const parse=()=>API?API.players.map(p=>({...p,o:p.tid==0?'fa':p.tid==myId()?'me':tn(p.tid)})):csvParse();
-async function load(force){try{const r=await fetch('/api/league'+(force?'?refresh=1':''));const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);API=j;ERR='';S.week=j.week;if(j.slots&&j.slots.length)SLOTS=j.slots}catch(e){API=null;ERR=String(e.message||e)}R()}
+async function load(force){try{const r=await fetch('/api/league'+(force?'?refresh=1':''));const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);API=j;OD=null;ERR='';S.week=j.week;if(j.slots&&j.slots.length)SLOTS=j.slots}catch(e){API=null;ERR=String(e.message||e)}R()}
 const csvParse=()=>S.csv.trim().split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(r=>r.length>=9&&!isNaN(+r[3])).map(r=>({n:r[0],p:r[1].toUpperCase(),t:r[2],pr:+r[3],ros:+r[4]||0,m:+r[5]||5,b:+r[6],st:r[7],o:r[8]}));
 const adj=p=>p.pr*(.9+.02*p.m);
 const out=p=>/^(out|ir)$/i.test(p.st),avail=p=>p.b!=S.week&&!out(p);
@@ -89,7 +101,8 @@ function best(ps,f,all){const pool=ps.filter(p=>all||avail(p)).sort((a,b)=>f(b)-
  return{slots,used,total:slots.reduce((a,[,x])=>a+(x?f(x):0),0)}}
 const erf=x=>{const t=1/(1+.3275911*Math.abs(x)),y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return x>=0?y:-y};
 const phi=z=>.5*(1+erf(z/Math.SQRT2));
-const row=(s,x)=>x?`<div class="r"><b class="pos">${s}</b><span>${esc(x.n)}<i>${x.p} · ${esc(x.t)}</i>${flag(x)}</span><em>${adj(x).toFixed(1)}</em></div>`:`<div class="r"><b class="pos">${s}</b><span class="m">No eligible player</span><em>0</em></div>`;
+const av=x=>x.id&&x.p!='DST'?`<img class="av" src="https://a.espncdn.com/i/headshots/nfl/players/full/${x.id}.png" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:'';
+const row=(s,x)=>x?`<div class="r"><b class="pos">${s}</b>${av(x)}<span>${esc(x.n)}<i>${x.p} · ${esc(x.t)}</i>${flag(x)}</span><em>${adj(x).toFixed(1)}</em></div>`:`<div class="r"><b class="pos">${s}</b><span class="m">No eligible player</span><em>0</em></div>`;
 const chip=(k,p,i)=>`<button class="chip${S[k].includes(i)?' on':''}" data-a="${k}" data-i="${i}">${esc(p.n)} <small>${p.p} · ${p.ros.toFixed(1)}</small></button>`;
 const sel=(k,list,cur)=>`<select data-k="${k}">${list.map(p=>`<option${p.n==cur?' selected':''}>${esc(p.n)}</option>`).join('')}</select>`;
 const V={};
@@ -108,7 +121,7 @@ V.ss=P=>{const L=P.filter(p=>p.o=='me');if(L.length<2)return'<div class="card">A
 V.wv=P=>{const me=P.filter(p=>p.o=='me'),fa=P.filter(p=>p.o=='fa');
  const rows=fa.map(f=>{const d=me.filter(p=>p.p==f.p).sort((a,b)=>a.ros-b.ros)[0];return{f,d,g:f.ros-(d?d.ros:0)}}).sort((a,b)=>b.g-a.g);
  return `<div class="card"><h3>Waiver wire</h3><small>Ranked by rest-of-season upgrade over your weakest player at the same position. Bid is a suggestion from your remaining FAAB ($${S.faab}).</small>
- ${rows.map(({f,d,g})=>{const bid=Math.round(S.faab*Math.min(35,Math.max(1,g*4))/100);return `<div class="r"><b class="pos">${f.p}</b><span>${esc(f.n)}<i>${esc(f.t)}</i>${flag(f)}<br><small>${g>0?`Drop ${d?esc(d.n):'—'} · bid ~$${bid}`:'No upgrade for your roster'}</small></span><em class="${g>0?'g':'m'}">${g>0?'+':''}${g.toFixed(1)}</em></div>`}).join('')||'<br><span class="m">No free agents (owner = fa) in your data.</span>'}</div>`};
+ ${rows.map(({f,d,g})=>{const bid=Math.round(S.faab*Math.min(35,Math.max(1,g*4))/100);return `<div class="r"><b class="pos">${f.p}</b>${av(f)}<span>${esc(f.n)}<i>${esc(f.t)}</i>${flag(f)}<br><small>${g>0?`Drop ${d?esc(d.n):'—'} · bid ~$${bid}`:'No upgrade for your roster'}</small></span><em class="${g>0?'g':'m'}">${g>0?'+':''}${g.toFixed(1)}</em></div>`}).join('')||'<br><span class="m">No free agents (owner = fa) in your data.</span>'}</div>`};
 V.tr=P=>{const me=P.filter(p=>p.o=='me'),idx=P.map((p,i)=>[p,i]),mine=idx.filter(([p])=>p.o=='me'),oth=idx.filter(([p])=>p.o!='me'&&p.o!='fa');
  const give=S.give.map(i=>P[i]).filter(Boolean),get=S.get.map(i=>P[i]).filter(Boolean);
  const before=best(me,p=>p.ros,true).total,after=best(me.filter(p=>!give.includes(p)).concat(get),p=>p.ros,true).total,d=after-before;
@@ -131,9 +144,17 @@ V.mu=P=>{if(!API)return'<div class="card">Matchups need the live ESPN connection
  <div class="verdict ${pw>=.5?'g':'bad'}">${(pw*100).toFixed(0)}% win probability</div><small>Both teams at their optimal lineups; spread from position volatility.</small></div>
  <div class="card"><h3>Their optimal lineup</h3>${B.b.slots.map(([s,x])=>row(s,x)).join('')}</div>`};
 V.lg=P=>{if(!API)return'<div class="card">League tools need the live ESPN connection (see Data tab).</div>';
- const rows=API.teams.map(t=>({t,pw:best(P.filter(p=>p.tid==t.id),p=>p.ros,true).total})).sort((a,b)=>b.t.w-a.t.w||b.t.pf-a.t.pf),pr=[...rows].sort((a,b)=>b.pw-a.pw).map(r=>r.t.id);
- return `<div class="card"><h3>Standings &amp; power rank</h3>${rows.map(({t,pw},i)=>`<div class="r"><b class="pos">${i+1}</b><span>${esc(t.name)}${t.id==myId()?'<u style="background:var(--ac);color:var(--acx)">YOU</u>':''}<br><small>${t.w}-${t.l}${t.t?'-'+t.t:''} · PF ${t.pf.toFixed(0)} · Power #${pr.indexOf(t.id)+1}</small></span><em>${pw.toFixed(1)}</em></div>`).join('')}</div>
+ const od=getOdds(P),rows=API.teams.map(t=>({t,pw:best(P.filter(p=>p.tid==t.id),p=>p.ros,true).total})).sort((a,b)=>b.t.w-a.t.w||b.t.pf-a.t.pf),pr=[...rows].sort((a,b)=>b.pw-a.pw).map(r=>r.t.id);
+ return `<div class="card"><h3>Standings &amp; power rank</h3>${rows.map(({t,pw},i)=>`<div class="r"><b class="pos">${i+1}</b><span>${esc(t.name)}${t.id==myId()?'<u style="background:var(--ac);color:var(--acx)">YOU</u>':''}<br><small>${t.w}-${t.l}${t.t?'-'+t.t:''} · PF ${t.pf.toFixed(0)} · Power #${pr.indexOf(t.id)+1}${od?` · Playoffs ${Math.round(od[t.id].po*100)}% · ~${od[t.id].ew.toFixed(1)}W`:''}</small></span><em>${pw.toFixed(1)}</em></div>`).join('')}</div>
  <small>Right column: best-lineup rest-of-season projection per week. Power rank sorts by it.</small>`};
+let OD=null;const getOdds=P=>API&&API.schedule?(OD=OD||odds(P)):null;
+function odds(P){const str={},sd={},res={},N=3000,rem=API.schedule.filter(m=>m.w>=S.week),z=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+ for(const t of API.teams){const b=best(P.filter(p=>p.tid==t.id),p=>p.ros,true);str[t.id]=b.total;sd[t.id]=Math.hypot(...b.slots.map(([,x])=>x?x.ros*(VOL[x.p]||.4):0))||1;res[t.id]={po:0,ew:0}}
+ for(let i=0;i<N;i++){const w={};API.teams.forEach(t=>w[t.id]=t.w+t.t*.5);
+  for(const m of rem){const a=str[m.h]+z()*sd[m.h],b=str[m.a]+z()*sd[m.a];w[a>b?m.h:m.a]++}
+  API.teams.map(t=>[t.id,w[t.id]+t.pf/1e6]).sort((x,y)=>y[1]-x[1]).slice(0,API.po||6).forEach(([id])=>res[id].po++);
+  API.teams.forEach(t=>res[t.id].ew+=w[t.id])}
+ for(const k in res){res[k].po/=N;res[k].ew/=N}return res}
 function muCalc(P){if(!API)return null;const id=myId(),m=API.matchups.find(x=>x.h==id||x.a==id),oid=m&&(m.h==id?m.a:m.h);if(!oid)return null;
  const sd=t=>{const b=best(P.filter(p=>p.tid==t),adj);return{t:b.total,s:Math.hypot(...b.slots.map(([,x])=>x?adj(x)*(VOL[x.p]||.4):0))}};
  const A=sd(id),O=sd(oid);return{A,O,oid,pw:phi((A.t-O.t)/Math.hypot(A.s,O.s))}}
@@ -158,7 +179,8 @@ function recs(P,mc){
  for(const pos of ['RB','WR'])if(me.filter(p=>p.p==pos&&avail(p)).length<=SLOTS.filter(s=>s==pos).length)ad.push(`Thin at ${pos}: no healthy bench cover, so one injury leaves you short.`);
  return{B,sw,cur,wv,trades,ad}}
 V.adv=P=>{const mc=muCalc(P),r=recs(P,mc),it=(t,sub,v)=>`<div class="r"><span>${t}<br><small>${sub}</small></span><em class="g">${v}</em></div>`;
- return `<div class="hero">${mc?`<small>WEEK ${S.week} vs ${esc(tn(mc.oid))}</small><div class="big">${Math.round(mc.pw*100)}%<small> win probability</small></div><div class="bar"><i style="width:${Math.round(mc.pw*100)}%"></i></div><small>${mc.A.t.toFixed(1)} projected vs ${mc.O.t.toFixed(1)}</small>`:`<small>WEEK ${S.week}</small><div class="big">${r.B.total.toFixed(1)}<small> projected points</small></div>`}</div>
+ const O=API&&getOdds(P),o0=O&&O[myId()],pc=mc?Math.round(mc.pw*100):0;
+ return `<div class="hero"><div class="hf">${mc?`<div class="ring" style="--p:${pc}"><b>${pc}%</b></div>`:''}<div><small>WEEK ${S.week}${mc?' vs '+esc(tn(mc.oid)):''}</small><div class="big">${mc?mc.A.t.toFixed(1)+'<small> vs '+mc.O.t.toFixed(1)+'</small>':r.B.total.toFixed(1)+'<small> projected</small>'}</div>${o0?`<div class="chips"><span>Playoffs ${Math.round(o0.po*100)}%</span><span>~${o0.ew.toFixed(1)} wins</span></div>`:''}</div></div></div>
  <div class="card"><h3>🎯 Who to start</h3>${r.cur.length?(r.sw.length?r.sw.map(([i,o])=>it(`Start <b>${esc(i.n)}</b> over ${esc(o.n)}`,`${adj(o).toFixed(1)} → ${adj(i).toFixed(1)} projected`,'+'+(adj(i)-adj(o)).toFixed(1))).join(''):'<p class="m">Your ESPN lineup already matches the optimal one. 👍</p>'):r.B.slots.map(([s,x])=>row(s,x)).join('')}</div>
  <div class="card"><h3>🧲 Waiver pickups</h3>${r.wv.map(x=>it(`Add <b>${esc(x.f.n)}</b> (${x.f.p}), drop ${esc(x.d.n)}`,`+${x.gw.toFixed(1)} this week · bid ~$${Math.round(S.faab*Math.min(35,Math.max(1,x.gr*6))/100)}`,'+'+x.gr.toFixed(1)+'/wk')).join('')||'<p class="m">No waiver move improves your lineup right now.</p>'}</div>
  <div class="card"><h3>🤝 Trades to offer</h3>${r.trades.map(t=>it(`Give <b>${esc(t.a.n)}</b> for <b>${esc(t.b.n)}</b>`,`${esc(t.o)} · they gain +${t.tg.toFixed(1)}/wk${t.tg>=.5?' · likely to accept':''}`,'+'+t.mg.toFixed(1)+'/wk')).join('')||'<p class="m">No 1-for-1 trade helps both sides right now.</p>'}</div>
