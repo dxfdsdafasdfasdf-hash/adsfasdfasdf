@@ -53,7 +53,9 @@ async function build() {
   for (const k of [0, 2, 4, 6, 23, 16, 17]) for (let i = 0; i < (lsc[k] || 0); i++) slots.push(SLOT[k]);
   const mp = L.status.currentMatchupPeriod;
   const matchups = L.schedule.filter(s => s.matchupPeriodId == mp && s.away).map(s => ({h:s.home.teamId, a:s.away.teamId}));
-  return {league:L.settings.name, season:SEASON, week, slots, teams, matchups, players, myTeamId:mine, updated:Date.now()};
+  return {league:L.settings.name, season:SEASON, week, slots, teams, matchups, players, myTeamId:mine, updated:Date.now(),
+    schedule:L.schedule.filter(s => s.away && s.matchupPeriodId <= ((L.settings.scheduleSettings || {}).matchupPeriodCount || 14)).map(s => ({w:s.matchupPeriodId, h:s.home.teamId, a:s.away.teamId})),
+    po:(L.settings.scheduleSettings || {}).playoffTeamCount || 6};
 }
 
 let cache = null;
