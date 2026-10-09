@@ -43,7 +43,7 @@ async function build() {
   const FA = await espn(lg, ['kona_player_info'], {players:{filterStatus:{value:['FREEAGENT', 'WAIVERS']},
     filterSlotIds:{value:[0, 2, 4, 6, 23, 16, 17]}, limit:120, sortPercOwned:{sortPriority:1, sortAsc:false}}});
   const players = [];
-  for (const t of L.teams) for (const e of t.roster.entries) players.push(norm(e.playerPoolEntry, t.id, week, bye));
+  for (const t of L.teams) for (const e of t.roster.entries) players.push({...norm(e.playerPoolEntry, t.id, week, bye), slot:e.lineupSlotId});
   for (const e of FA.players || []) players.push(norm(e, 0, week, bye));
   const teams = L.teams.map(t => ({id:t.id, name:t.name || `${t.location} ${t.nickname}`,
     w:t.record.overall.wins, l:t.record.overall.losses, t:t.record.overall.ties,
